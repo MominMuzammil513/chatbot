@@ -14,8 +14,6 @@ export async function getChatResponse(query: string): Promise<string> {
       .from(messages)
       .where(ilike(messages.query, normalizedQuery));
 
-    console.log('Result:', result);
-
     if (result.length > 0) {
       return result[0].response;
     } else {

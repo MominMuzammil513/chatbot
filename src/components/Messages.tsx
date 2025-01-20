@@ -11,9 +11,6 @@ export function Messages({ message }: { message: Message }) {
           } transition-all duration-200`}
         >
           <p className="text-sm">{message.text}</p>
-          <p className={`text-xs mt-1 ${message.isUser ? "text-purple-200" : "text-gray-400"}`}>
-            {message.timestamp.toLocaleTimeString()}
-          </p>
         </div>
       </div>
     )
