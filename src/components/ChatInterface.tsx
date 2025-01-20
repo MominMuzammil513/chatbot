@@ -1,6 +1,6 @@
 "use client";
 import { getChatResponse } from "@/app/actions";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,18 +28,52 @@ const WelcomeMessage: Message = {
   isUser: false,
 };
 
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([WelcomeMessage]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [lastSentSuggestion, setLastSentSuggestion] = useState<string | null>(
+    null
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const resetSuggestions = useCallback(() => {
+    const shuffledSeedData = shuffleArray(seedData);
+
+    const filteredSuggestions = shuffledSeedData
+      .filter((data) => data.query !== lastSentSuggestion)
+      .slice(0, 2)
+      .map((data) => data.query);
+
+    if (filteredSuggestions.length < 2) {
+      const additionalSuggestions = shuffledSeedData
+        .filter(
+          (data) =>
+            !filteredSuggestions.includes(data.query) &&
+            data.query !== lastSentSuggestion
+        )
+        .slice(0, 2 - filteredSuggestions.length)
+        .map((data) => data.query);
+      setSuggestions([...filteredSuggestions, ...additionalSuggestions]);
+    } else {
+      setSuggestions(filteredSuggestions);
+    }
+  }, [lastSentSuggestion]);
+
   useEffect(() => {
-    const defaultSuggestions = seedData.slice(0, 2).map((data) => data.query);
-    setSuggestions(defaultSuggestions);
-  }, []);
+    resetSuggestions();
+  }, [resetSuggestions]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,14 +81,16 @@ export default function ChatInterface() {
 
   const findSuggestions = (input: string) => {
     if (!input.trim()) {
-      const defaultSuggestions = seedData.slice(0, 2).map((data) => data.query);
-      setSuggestions(defaultSuggestions);
+      resetSuggestions();
       return;
     }
     const matchedQueries = seedData
-      .filter((data) => data.query.toLowerCase().includes(input.toLowerCase()))
+      .filter(
+        (data) =>
+          data.query.toLowerCase().includes(input.toLowerCase()) &&
+          data.query !== lastSentSuggestion
+      )
       .map((data) => data.query);
-
     setSuggestions(
       matchedQueries.length >= 2 ? matchedQueries.slice(0, 2) : []
     );
@@ -87,6 +123,8 @@ export default function ChatInterface() {
       );
     } finally {
       setIsLoading(false);
+      setLastSentSuggestion(inputMessage);
+      resetSuggestions();
     }
   };
 
